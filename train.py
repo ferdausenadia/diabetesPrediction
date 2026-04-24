@@ -2,28 +2,35 @@ import pandas as pd
 import numpy as np
 import pickle
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
 
+
 df = pd.read_csv("diabetes.csv")
+
 print(df.head())
+
 
 
 df = df.drop(columns=['SkinThickness'])
 
+
+
 cols_with_zero = ['Glucose', 'BloodPressure', 'Insulin', 'BMI']
-df[cols_with_zero] = df[cols_with_zero].replace(0, np.nan)
+
+for col in cols_with_zero:
+    df[col] = df[col].replace(0, np.nan)
+
 
 
 X = df.drop("Outcome", axis=1)
 y = df["Outcome"]
+
 
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -35,25 +42,13 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 
-numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
-
-
-num_pipeline = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', num_pipeline, numeric_features)
-    ]
-)
-
 
 model = Pipeline(steps=[
-    ('preprocessor', preprocessor),
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler()),
     ('classifier', RandomForestClassifier(random_state=42))
 ])
+
 
 
 param_grid = {
@@ -62,6 +57,7 @@ param_grid = {
     'classifier__min_samples_split': [2, 5],
     'classifier__min_samples_leaf': [1, 2]
 }
+
 
 grid_search = GridSearchCV(
     estimator=model,
@@ -72,23 +68,29 @@ grid_search = GridSearchCV(
     verbose=2
 )
 
+
+
 grid_search.fit(X_train, y_train)
+
+
 
 print("Best Parameters:", grid_search.best_params_)
 print("Best CV Score:", grid_search.best_score_)
 
-
 best_model = grid_search.best_estimator_
+
 
 
 y_pred = best_model.predict(X_test)
 
-print("Test Accuracy:", accuracy_score(y_test, y_pred))
-print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
-print("Classification Report:\n", classification_report(y_test, y_pred))
+print("\nTest Accuracy:", accuracy_score(y_test, y_pred))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
 
 
 with open("random_forest_model.pkl", "wb") as file:
     pickle.dump(best_model, file)
 
-print("Model saved as random_forest_model.pkl")
+print("\nModel saved as random_forest_model.pkl")
+#changes made.
